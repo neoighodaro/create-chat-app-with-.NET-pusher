@@ -1,0 +1,258 @@
+﻿﻿<!DOCTYPE html>
+<html>
+<head>
+  <title>pChat &mdash; Private Chatroom</title>
+  <link rel="stylesheet" href="@Url.Content("~/Content/app.css")">
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-inverse">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="#">pChat - @ViewBag.currentUser.name </a>
+        </div>
+        <ul class="nav navbar-nav navbar-right">
+          <li><a href="#">Log Out</a></li>
+        </ul>
+      </div>
+    </nav>
+    <!-- / Navigation Bar -->
+    <div class="container">
+      <div class="row">
+        <div class="col-xs-12 col-md-3">
+          <aside class="main">
+            <div class="row">
+              <div class="col-xs-12">
+                <div class="panel panel-default users__bar">
+                  <div class="panel-heading users__heading">
+                    Contacts (@ViewBag.allUsers.Count)
+                  </div>
+                  <div class="__no__chat__">
+                      <p>Select a contact to chat with</p>
+                  </div>
+                  <div class="panel-body users__body">
+                    <ul id="contacts" class="list-group">
+
+                    @foreach( var user in @ViewBag.allUsers ) {
+                        <a class="user__item contact-@user.id" href="#" data-contact-id="@user.id" data-contact-name="@user.name">
+                            <li>
+                              <div class="avatar">
+                                 <img src="@Url.Content("~/Content/no_avatar.png")">
+                              </div>
+                              <span>@user.name</span>
+                              <div class="status-bar"></div>
+                            </li>
+                        </a>
+                    }
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+
+        </div>
+        <div class="col-xs-12 col-md-9 chat__body">
+          <div class="row">
+            <div class="col-xs-12">
+              <ul class="list-group chat__main">
+                
+              </ul>
+            </div>
+            <div class="chat__type__body">
+              <div class="chat__type">
+                <textarea id="msg_box" placeholder="Type your message"></textarea>
+                <button class="btn btn-primary" id="sendMessage">Send</button>
+              </div>
+            </div>
+            <div class="chat__typing">
+              <span id="typerDisplay"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="@Url.Content("~/Content/app.js")"></script>
+    <script src="https://js.pusher.com/4.0/pusher.min.js"></script>
+    <script>
+        //////////// Variable Instantiation
+
+            function throttle(callback, wait, context = this) {
+  let timeout = null 
+  let callbackArgs = null
+  
+  const later = () => {
+    callback.apply(context, callbackArgs)
+    timeout = null
+  }
+  
+  return function() {
+    if (!timeout) {
+      callbackArgs = arguments
+      timeout = setTimeout(later, wait)
+    }
+  }
+}
+            
+            let currentContact = null; // Holds contact currently being chatted with
+            let socketId = null;
+                
+            //Pusher client side setup
+            const pusher = new Pusher('PUSHER_APP_ID', {
+                cluster:'PUSHER_APP_CLUSTER'
+            });
+
+            pusher.connection.bind('connected', function() {
+              socketId = pusher.connection.socket_id;
+            });
+
+            let newMessageTpl = 
+            `<div>
+                <div id="msg-{{id}}" class="row __chat__par__">
+                  <div class="__chat__">
+                    <p>{{body}}</p>
+                    <p class="delivery-status">Delivered</p>
+                  </div>
+                </div>
+             </div>`;
+        /////////////////////////////////
+
+        const chatChannel = pusher.subscribe('presence-chat');
+
+        chatChannel.bind("pusher:subscription_succeeded", function(members) {
+            
+            members.each(function(member) {
+                setContactStatus(member.info.id, 1);
+            });
+        });
+
+        chatChannel.bind("pusher:member_added", function(member){
+          setContactStatus(member.info.id, 1);
+        });
+
+        chatChannel.bind("pusher:member_removed", function(member){
+          setContactStatus(member.info.id, 0);
+        });
+
+        chatChannel.bind("client-is-typing", function(data) {
+            if ( data.user_id == currentContact.id && data.contact_id == @ViewBag.currentUser.id  ) {
+
+                $('#typerDisplay').text( currentContact.name + ' is typing...');
+            
+                $('.chat__typing').fadeIn(100, function() {
+                    $('.chat__type__body').addClass('typing_display__open');
+                }).delay(1000).fadeOut(300, function(){
+                    $('.chat__type__body').removeClass('typing_display__open');
+                });
+            }
+        });
+
+        chatChannel.bind("new_message", function(msg) {
+             if ( msg.receiver_id == @ViewBag.currentUser.id ) {
+                displayMessage(msg);
+             }
+
+             $.post("/message_delivered/" + msg.id, {
+                socket_id: socketId,
+             });
+        });
+
+        chatChannel.bind("message_delivered", function(msg) {
+            $('#msg-' + msg.id).find('.delivery-status').show();
+        });
+
+        function setContactStatus( contact_id, status ) {
+            var contactObj = $('#contacts .contact-' + contact_id);
+
+            if ( status ) {
+                contactObj.find('.status-bar').addClass('active');
+            } else {
+                contactObj.find('.status-bar').removeClass('active');
+            }
+        }
+
+        function displayMessage( message_obj ) {
+            const msg_id = message_obj.id;
+            const msg_body = message_obj.message;
+
+            let template = $(newMessageTpl).html();
+
+            template = template.replace("{{id}}", msg_id);
+            template = template.replace("{{body}}", msg_body);
+
+            template = $(template);
+
+            if ( message_obj.sender_id == @ViewBag.currentUser.id ) {
+                template.find('.__chat__').addClass('from__chat');
+            } else {
+                template.find('.__chat__').addClass('receive__chat');
+            }
+
+            if ( message_obj.status == 1 ) {
+                template.find('.delivery-status').show();
+            }
+
+            $('.chat__main').append(template);
+        }
+
+       // get chat data        
+       function getChat( contact_id ) {
+            $.post("/contact/conversations/" + contact_id )
+             .done( function(resp) {         
+                let chat_data = resp.data || [];
+                loadChat( chat_data );         
+             });
+       }
+
+       //load chat data into view
+       function loadChat( chat_data ) {
+
+            chat_data.forEach( function(data) {
+                displayMessage(data);
+            });
+            
+            $('.chat__body').show();
+            $('.__no__chat__').hide();
+       }
+
+       // select contact to chat with
+       $('.user__item').click( function(e) {
+            e.preventDefault();
+
+            currentContact = {
+                id: $(this).data('contact-id'),
+                name: $(this).data('contact-name'),
+            };
+
+            $('#contacts').find('li').removeClass('active');
+
+            $('#contacts .contact-' + currentContact.id).find('li').addClass('active');
+            getChat(currentContact.id);
+       });
+
+       //User is typing
+        var isTypingCallback = throttle(function() {
+            chatChannel.trigger("client-is-typing", {
+                user_id: @ViewBag.currentUser.id,
+                contact_id: currentContact.id,
+            });
+        }, 1000);
+
+        $('#msg_box').on('keyup',isTypingCallback);
+
+        ///////////////////Sending Messages/////////////////////
+        $('#sendMessage').click( function() {
+            $.post("/send_message", {
+                message: $('#msg_box').val(),
+                contact: currentContact.id,
+                socket_id: socketId,
+            }).done( function (data) {
+                displayMessage(data);
+                $('#msg_box').val('');
+            });
+        });
+    </script>
+</body>
+</html>

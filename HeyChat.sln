@@ -1,0 +1,23 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeyChat", "HeyChat\HeyChat.csproj", "{7123537E-7EC0-4A45-A5AD-A736800FCA33}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeyChat.Tests", "HeyChat.Tests\HeyChat.Tests.csproj", "{FB014903-EF77-4F87-9498-50CB533B595A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7123537E-7EC0-4A45-A5AD-A736800FCA33}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7123537E-7EC0-4A45-A5AD-A736800FCA33}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7123537E-7EC0-4A45-A5AD-A736800FCA33}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7123537E-7EC0-4A45-A5AD-A736800FCA33}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FB014903-EF77-4F87-9498-50CB533B595A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FB014903-EF77-4F87-9498-50CB533B595A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FB014903-EF77-4F87-9498-50CB533B595A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FB014903-EF77-4F87-9498-50CB533B595A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
