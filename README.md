@@ -2,7 +2,7 @@
 
 This is a sample project, showing how to build a chat application using .NET and Pusher. This chat application possesses several popular real-time functionalities such as the who's typing feature, message delivery status and user availability notifications.
 
-![](https://paper.dropbox.com/ep/redirect/image?url=https%3A%2F%2Fd2mxuefqeaa7sj.cloudfront.net%2Fs_75B5206BA808AD67BB12DF227A6956C6D150F8689CDD9C63833ABC88400A55AA_1511211854015_chatapp.gif&hmac=Q6sutb2GGUWqoxYOjFPrrLfhzYECgk2QZsCgdsbT4cQ%3D)
+![](https://www.dropbox.com/s/prt40qm8ukylvxa/Chat-Message-using-net.gif?raw=1)
 
 ### How to set up project
 
