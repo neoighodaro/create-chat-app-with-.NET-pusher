@@ -9,7 +9,6 @@ namespace HeyChat.Controllers
 {
     public class ConversationController : Controller
     {
-        [HttpPost]
         public JsonResult WithContact(int contact)
         {
 			if (Session["user"] == null)
