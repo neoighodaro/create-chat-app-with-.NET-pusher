@@ -199,7 +199,7 @@
 
        // get chat data        
        function getChat( contact_id ) {
-            $.post("/contact/conversations/" + contact_id )
+            $.get("/contact/conversations/" + contact_id )
              .done( function(resp) {         
                 let chat_data = resp.data || [];
                 loadChat( chat_data );         
