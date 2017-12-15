@@ -10,6 +10,24 @@ namespace HeyChat.Controllers
 {
     public class AuthController : Controller
     {
+    
+    	
+	private Pusher pusher;
+
+	//class constructor
+	public AuthController() 
+	{
+
+	    var options = new PusherOptions();
+	    options.Cluster = "PUSHER_APP_CLUSTER";
+
+	    pusher = new Pusher(
+	       "PUSHER_APP_ID",
+	       "PUSHER_APP_KEY",
+	       "PUSHER_APP_SECRET",
+	       options
+	   );
+	}
 		[HttpPost]
 		public ActionResult Login()
 		{
@@ -55,14 +73,6 @@ namespace HeyChat.Controllers
                     name = currentUser.name
                 },
             };
-
-			var options = new PusherOptions();
-			options.Cluster = "PUSHER_APP_CLUSTER";
-
-			var pusher = new Pusher(
-			  "PUSHER_APP_ID",
-			  "PUSHER_APP_KEY",
-			  "PUSHER_APP_SECRET", options);
 
 			var auth = pusher.Authenticate(channel_name, socket_id, channelData);
 			
