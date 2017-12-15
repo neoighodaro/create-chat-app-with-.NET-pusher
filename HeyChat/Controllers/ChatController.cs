@@ -10,6 +10,24 @@ namespace HeyChat.Controllers
 {
     public class ChatController : Controller
     {
+    	
+	private Pusher pusher;
+
+	//class constructor
+	public ChatController() 
+	{
+
+	    var options = new PusherOptions();
+	    options.Cluster = "PUSHER_APP_CLUSTER";
+
+	    pusher = new Pusher(
+	       "PUSHER_APP_ID",
+	       "PUSHER_APP_KEY",
+	       "PUSHER_APP_SECRET",
+	       options
+	   );
+	}
+
         public ActionResult Index()
         {
 			if (Session["user"] == null) {
@@ -80,19 +98,11 @@ namespace HeyChat.Controllers
             }
 
 
-			var options = new PusherOptions();
-			options.Cluster = "PUSHER_APP_CLUSTER";
-
-			var pusher = new Pusher(
-			  "PUSHER_APP_ID",
-			  "PUSHER_APP_KEY",
-			  "PUSHER_APP_SECRET", options);
-
-			pusher.TriggerAsync(
-			  "presence-chat",
-			  "new_message",
-			  convo,
-			  new TriggerOptions() { SocketId = socket_id });
+	    pusher.TriggerAsync(
+		"presence-chat",
+		"new_message",
+		convo,
+		new TriggerOptions() { SocketId = socket_id });
 
             return Json(convo);
         }
@@ -115,21 +125,12 @@ namespace HeyChat.Controllers
 			}
 
             string socket_id = Request.Form["socket_id"];
-
-
-			var options = new PusherOptions();
-			options.Cluster = "PUSHER_APP_CLUSTER";
-
-			var pusher = new Pusher(
-			  "PUSHER_APP_ID",
-			  "PUSHER_APP_KEY",
-			  "PUSHER_APP_SECRET", options);
-
-			pusher.TriggerAsync(
-			  "presence-chat",
-			  "message_delivered",
-			  convo,
-			  new TriggerOptions() { SocketId = socket_id });
+			
+	    pusher.TriggerAsync(
+	  	"presence-chat",
+	  	"message_delivered",
+	  	convo,
+	  	new TriggerOptions() { SocketId = socket_id });
 
             return Json(convo);
         }
