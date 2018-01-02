@@ -95,9 +95,7 @@
     }
   }
 }
-            
-            let currentContact = null; // Holds contact currently being chatted with
-            let socketId = null;
+           
                 
             //Pusher client side setup
             const pusher = new Pusher('PUSHER_APP_ID', {
@@ -105,143 +103,109 @@
             });
 
             pusher.connection.bind('connected', function() {
-              socketId = pusher.connection.socket_id;
-            });
-
-            let newMessageTpl = 
-            `<div>
-                <div id="msg-{{id}}" class="row __chat__par__">
-                  <div class="__chat__">
-                    <p>{{body}}</p>
-                    <p class="delivery-status">Delivered</p>
-                  </div>
+            socketId = pusher.connection.socket_id;
+        });
+        let currentContact = null; // Holds contact currently being chatted with
+        let socketId = null;
+        let currentconversationChannel = null;//pusher.subscribe('chat-' + @ViewBag.currentUser.id );
+        let conversationChannelName = null;
+        let newMessageTpl = 
+        `<div>
+            <div id="msg-{{id}}" class="row __chat__par__">
+                <div class="__chat__">
+                <p>{{body}}</p>
+                <p class="delivery-status">Delivered</p>
                 </div>
-             </div>`;
-        /////////////////////////////////
-
-        const chatChannel = pusher.subscribe('presence-chat');
-
-        chatChannel.bind("pusher:subscription_succeeded", function(members) {
+            </div>
+            </div>`;
+    /////////////////////////////////
+        const chatAppChannel = pusher.subscribe('presence-chat');
+        chatAppChannel.bind("pusher:subscription_succeeded", function(members) {
             
             members.each(function(member) {
                 setContactStatus(member.info.id, 1);
             });
         });
-
-        chatChannel.bind("pusher:member_added", function(member){
-          setContactStatus(member.info.id, 1);
+        chatAppChannel.bind("pusher:member_added", function(member){
+            setContactStatus(member.info.id, 1);
         });
-
-        chatChannel.bind("pusher:member_removed", function(member){
-          setContactStatus(member.info.id, 0);
+        chatAppChannel.bind("pusher:member_removed", function(member){
+            setContactStatus(member.info.id, 0);
         });
-
-        chatChannel.bind("client-is-typing", function(data) {
-            if ( data.user_id == currentContact.id && data.contact_id == @ViewBag.currentUser.id  ) {
-
-                $('#typerDisplay').text( currentContact.name + ' is typing...');
-            
-                $('.chat__typing').fadeIn(100, function() {
-                    $('.chat__type__body').addClass('typing_display__open');
-                }).delay(1000).fadeOut(300, function(){
-                    $('.chat__type__body').removeClass('typing_display__open');
-                });
-            }
-        });
-
-        chatChannel.bind("new_message", function(msg) {
-             if ( msg.receiver_id == @ViewBag.currentUser.id ) {
-                displayMessage(msg);
-             }
-
-             $.post("/message_delivered/" + msg.id, {
-                socket_id: socketId,
-             });
-        });
-
-        chatChannel.bind("message_delivered", function(msg) {
-            $('#msg-' + msg.id).find('.delivery-status').show();
-        });
-
         function setContactStatus( contact_id, status ) {
             var contactObj = $('#contacts .contact-' + contact_id);
-
             if ( status ) {
                 contactObj.find('.status-bar').addClass('active');
             } else {
                 contactObj.find('.status-bar').removeClass('active');
             }
         }
-
         function displayMessage( message_obj ) {
             const msg_id = message_obj.id;
             const msg_body = message_obj.message;
-
             let template = $(newMessageTpl).html();
-
             template = template.replace("{{id}}", msg_id);
             template = template.replace("{{body}}", msg_body);
-
             template = $(template);
-
             if ( message_obj.sender_id == @ViewBag.currentUser.id ) {
                 template.find('.__chat__').addClass('from__chat');
             } else {
                 template.find('.__chat__').addClass('receive__chat');
             }
-
             if ( message_obj.status == 1 ) {
                 template.find('.delivery-status').show();
             }
-
             $('.chat__main').append(template);
         }
-
-       // get chat data        
-       function getChat( contact_id ) {
+        // get chat data        
+        function getChat( contact_id ) {
             $.get("/contact/conversations/" + contact_id )
-             .done( function(resp) {         
+                .done( function(resp) {         
                 let chat_data = resp.data || [];
                 loadChat( chat_data );         
-             });
-       }
-
-       //load chat data into view
-       function loadChat( chat_data ) {
-
+                });
+        }
+        //load chat data into view
+        function loadChat( chat_data ) {
             chat_data.forEach( function(data) {
                 displayMessage(data);
             });
             
             $('.chat__body').show();
             $('.__no__chat__').hide();
-       }
-
-       // select contact to chat with
-       $('.user__item').click( function(e) {
+        }
+        // select contact to chat with
+        $('.user__item').click( function(e) {
             e.preventDefault();
-
             currentContact = {
                 id: $(this).data('contact-id'),
                 name: $(this).data('contact-name'),
             };
-
+            if ( conversationChannelName ) {
+                pusher.unsubscribe( conversationChannelName );
+            }
+            conversationChannelName = getConvoChannel( (@ViewBag.currentUser.id * 1) ,  (currentContact.id * 1) );
+            currentconversationChannel = pusher.subscribe(conversationChannelName);
+            bind_client_events();
+                                        
             $('#contacts').find('li').removeClass('active');
-
             $('#contacts .contact-' + currentContact.id).find('li').addClass('active');
             getChat(currentContact.id);
-       });
-
-       //User is typing
+        });
+        function getConvoChannel(user_id, contact_id) {
+            if ( user_id > contact_id ) {
+                return 'private-chat-' + contact_id + '-' + user_id;
+            }
+            return 'private-chat-' + user_id + '-' + contact_id;
+        }
+        //User is typing
         var isTypingCallback = throttle(function() {
-            chatChannel.trigger("client-is-typing", {
+            currentconversationChannel.trigger("client-is-typing", {
                 user_id: @ViewBag.currentUser.id,
                 contact_id: currentContact.id,
             });
         }, 1000);
-
         $('#msg_box').on('keyup',isTypingCallback);
-
         ///////////////////Sending Messages/////////////////////
         $('#sendMessage').click( function() {
             $.post("/send_message", {
@@ -253,6 +217,30 @@
                 $('#msg_box').val('');
             });
         });
+        function bind_client_events(){
+            currentconversationChannel.bind("client-is-typing", function(data) {
+                if ( data.user_id == currentContact.id && data.contact_id == @ViewBag.currentUser.id  ) {
+                    $('#typerDisplay').text( currentContact.name + ' is typing...');
+                
+                    $('.chat__typing').fadeIn(100, function() {
+                        $('.chat__type__body').addClass('typing_display__open');
+                    }).delay(1000).fadeOut(300, function(){
+                        $('.chat__type__body').removeClass('typing_display__open');
+                    });
+                }
+            });
+            currentconversationChannel.bind("new_message", function(msg) {
+                    if ( msg.receiver_id == @ViewBag.currentUser.id ) {
+                    displayMessage(msg);
+                    }
+                    $.post("/message_delivered/" + msg.id, {
+                    socket_id: socketId,
+                    });
+            });
+            currentconversationChannel.bind("message_delivered", function(msg) {
+                $('#msg-' + msg.id).find('.delivery-status').show();
+            });
+        }
     </script>
 </body>
 </html>
