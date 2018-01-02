@@ -65,18 +65,34 @@ namespace HeyChat.Controllers
 
             var currentUser = (Models.User)Session["user"];
 
-            var channelData = new PresenceChannelData()
-            {
-                user_id = currentUser.id.ToString(),
-                user_info = new {
-                    id   = currentUser.id,
-                    name = currentUser.name
-                },
-            };
+            if ( channel_name.IndexOf("presence") >= 0 ) {
 
-			var auth = pusher.Authenticate(channel_name, socket_id, channelData);
-			
-            return Json( auth );
+				var channelData = new PresenceChannelData()
+				{
+					user_id = currentUser.id.ToString(),
+					user_info = new
+					{
+						id = currentUser.id,
+						name = currentUser.name
+					},
+				};
+
+				var presenceAuth = pusher.Authenticate(channel_name, socket_id, channelData);
+
+				return Json(presenceAuth);
+
+            }
+
+	    if (channel_name.IndexOf(currentUser.id.ToString()) == -1)
+	    {
+		return Json(new { status = "error", message = "User cannot join channel" });
+	    }
+
+	    var auth = pusher.Authenticate(channel_name, socket_id);
+
+	    return Json(auth);
+
+
         }
     }
 }
